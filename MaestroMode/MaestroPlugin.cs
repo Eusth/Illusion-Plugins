@@ -9,6 +9,7 @@ using UnityEngine;
 
 namespace MaestroMode
 {
+
     public class MaestroPlugin : IPlugin
     {
         enum MaestroMode
@@ -54,7 +55,7 @@ namespace MaestroMode
 
         public string Version
         {
-            get { return "0.3"; }
+            get { return "0.3.1"; }
         }
 
         public void OnLevelWasLoaded(int level)
@@ -107,6 +108,19 @@ namespace MaestroMode
                     {
                         InitHandle(ConstraintHandle.Create(biped.solver.GetBendConstraint(constraintType), _camera), human);
                     }
+
+                    //foreach (var handle in SetupElasticChinko(human))
+                    //{
+                    //    InitHandle(handle, human);
+                    //}
+                    //var limb = SetupChinko(human);
+                    //if (limb != null)
+                    //{
+                    //    Console.WriteLine("Make CHINKO");
+                    //    InitHandle(LimbHandle.Create(limb, _camera), human);
+                    //    InitHandle(LimbGoalHandle.Create(limb, _camera), human);
+                    //}
+
 
                 }
                 else if (_mode == MaestroMode.BIK)
@@ -247,7 +261,16 @@ namespace MaestroMode
 
         private BipedIK SetUpSimpleBiped(Human member)
         {
-            var ik = member.gameObject.AddComponent<BipedIK>();
+            var ik = member.gameObject.AddComponent<ObservableBipedIK>();
+
+            ik.IKPass += delegate
+            {
+                if (member.neckLook != null)
+                    member.neckLook.Calc();
+                if (member.eyeLook != null)
+                    member.eyeLook.Calc();
+            };
+
             var root = member.transform.FindChild("cm_body_01");
             if (root == null) root = member.transform.FindChild("cf_body_01");
             if (root == null)
@@ -331,9 +354,63 @@ namespace MaestroMode
             return ik;
         }
 
+        private TransformHandle[] SetupElasticChinko(Human member)
+        {
+
+            if (member.sex == Human.SEX.FEMALE)
+            {
+                var root = member.transform.FindChild("cf_body_01");
+                var bones = root.GetComponentsInChildren<Transform>().Where(t =>
+                    t.name.StartsWith("cf_J_Kosi02")
+                    //&& t.name.EndsWith("01")
+                ).ToArray();
+
+                return bones.Select(bone => TransformHandle.Create(bone, _camera) ).ToArray();
+
+            } else return new TransformHandle[0];
+
+        }
+
+        private IKSolverLimb SetupChinko(Human member)
+        {
+            if (member.sex == Human.SEX.MALE)
+            {
+                var bones = member.transform.GetComponentsInChildren<Transform>().Where(t => 
+                    t.name == "cm_J_dan100_00"
+                    || t.name == "cm_J_dan106_00"
+                    || t.name == "cm_J_dan109_00"
+                    
+                ).ToArray();
+                var rootBone = member.transform.GetComponentsInChildren<Transform>().First(t => t.name.StartsWith("cm_J_dan_top"));
+                var root = member.transform.FindChild("cm_body_01");
+               
+                var limb = member.gameObject.AddComponent<LimbIK>();
+
+                limb.solver.SetChain(bones[0], bones[1], bones[2], root);
+                //limb.solver.bone1.transform = bones[0];
+                //limb.solver.bone2.transform = bones[1];
+                //limb.solver.bone3.transform = bones[2];
+
+                return limb.solver;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
         private FullBodyBipedIK SetUpBiped(Human member)
         {
-            var ik = member.gameObject.AddComponent<FullBodyBipedIK>();
+            var ik = member.gameObject.AddComponent<ObservableFullBodyBipedIK>();
+
+            ik.IKPass += delegate
+            {
+                if (member.neckLook != null)
+                    member.neckLook.Calc();
+                if (member.eyeLook != null)
+                    member.eyeLook.Calc();
+            };
+
             var root = member.transform.FindChild("cm_body_01");
             if (root == null) root = member.transform.FindChild("cf_body_01");
             if (root == null)
@@ -420,6 +497,30 @@ namespace MaestroMode
 
             return ik;
         }
+
+        #region Observable helper classes
+        public class ObservableFullBodyBipedIK : FullBodyBipedIK
+        {
+            public event EventHandler IKPass = delegate { };
+            protected override void UpdateSolver()
+            {
+                base.UpdateSolver();
+
+                IKPass(this, new EventArgs());
+            }
+        }
+
+        public class ObservableBipedIK : BipedIK
+        {
+            public event EventHandler IKPass = delegate { };
+            protected override void UpdateSolver()
+            {
+                base.UpdateSolver();
+
+                IKPass(this, new EventArgs());
+            }
+        }
+        #endregion
 
         #region Stubs
 

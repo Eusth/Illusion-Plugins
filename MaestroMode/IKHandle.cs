@@ -62,7 +62,7 @@ namespace MaestroMode
             get;
         }
 
-        private void Update()
+        protected virtual void Update()
         {
             if (!_changed)
             {
@@ -88,7 +88,7 @@ namespace MaestroMode
             }
         }
 
-        private void LateUpdate()
+        protected virtual void LateUpdate()
         {
             if (_dragging)
             {
