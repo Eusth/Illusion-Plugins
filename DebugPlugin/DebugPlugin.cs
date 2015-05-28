@@ -79,6 +79,35 @@ namespace DebugPlugin
                     Console.WriteLine("DUMPED COLLADA");
                 }
             }
+
+            for (int i = (int)KeyCode.Keypad1; i <= (int)KeyCode.Keypad9; i++)
+            {
+                if (Input.GetKeyDown((KeyCode)i))
+                {
+                    int no = i - (int)KeyCode.Keypad0;
+                    if (Input.GetKey(KeyCode.LeftControl))
+                    {
+                        var GC = GameObject.FindObjectOfType<GameControl>();
+                        GC.PlayData.Load(Directory.GetCurrentDirectory() + "/UserData/save/Game/" + (no).ToString("00") + ".gsd");
+                        if (GC.PlayData.isAdv)
+                        {
+                            GC.SceneCtrl.Change("EventScene", "Load", Color.black, 0.1f, 0f, false);
+                        }
+                        else
+                        {
+                            GC.SceneCtrl.Change("SelectScene", "Load", Color.black, 0.1f, 0f, false);
+                        }
+                    }
+                    else
+                    {
+                        Application.LoadLevel(no);
+                    }
+
+                    break;
+                }
+
+            }
+
         }
 
         public void OnFixedUpdate()

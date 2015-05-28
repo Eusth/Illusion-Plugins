@@ -186,27 +186,27 @@ namespace PlayClubInspector
             scene = GameObject.FindObjectOfType<H_Scene>();
 
             // Remove mosaic
-            foreach (var mosaic in GameObject.FindObjectsOfType<MozUV>())
-            {
-                mosaic.enabled = false;
+            //foreach (var mosaic in GameObject.FindObjectsOfType<MozUV>())
+            //{
+            //    mosaic.enabled = false;
 
-                if (mosaic.name.StartsWith("cf_"))
-                    mosaic.GetComponent<Renderer>().enabled = false;
-            }
+            //    if (mosaic.name.StartsWith("cf_"))
+            //        mosaic.GetComponent<Renderer>().enabled = false;
+            //}
 
 
-            foreach (var renderer in GameObject.FindObjectsOfType<Renderer>().Where(renderer => renderer.sharedMaterial.mainTexture != null))
-            {
-                if (textures.ContainsKey(renderer.sharedMaterial.mainTexture.name))
-                {
-                    renderer.sharedMaterial.mainTexture = textures[renderer.sharedMaterial.mainTexture.name];
-                }
-                //Console.WriteLine("OWRAP: {0}", renderer.sharedMaterial.mainTexture.wrapMode);
-                //Console.WriteLine("NWRAP: {0}", m_nudeTexture.wrapMode);
+            //foreach (var renderer in GameObject.FindObjectsOfType<Renderer>().Where(renderer => renderer.sharedMaterial.mainTexture != null))
+            //{
+            //    if (textures.ContainsKey(renderer.sharedMaterial.mainTexture.name))
+            //    {
+            //        renderer.sharedMaterial.mainTexture = textures[renderer.sharedMaterial.mainTexture.name];
+            //    }
+            //    //Console.WriteLine("OWRAP: {0}", renderer.sharedMaterial.mainTexture.wrapMode);
+            //    //Console.WriteLine("NWRAP: {0}", m_nudeTexture.wrapMode);
 
-                // renderer.sharedMaterial.SetTexture("_MainTex", m_nudeTexture);
-                //renderer.sharedMaterial.mainTexture = m_nudeTexture;
-            }
+            //    // renderer.sharedMaterial.SetTexture("_MainTex", m_nudeTexture);
+            //    //renderer.sharedMaterial.mainTexture = m_nudeTexture;
+            //}
 
             if (level == 3)
             {
@@ -253,14 +253,14 @@ namespace PlayClubInspector
             }
             //if (Application.loadedLevel == 0)
             {
-                for (int i = (int)KeyCode.Keypad1; i <= (int)KeyCode.Keypad9; i++)
-                {
-                    if (Input.GetKeyDown((KeyCode)i))
-                    {
-                        Application.LoadLevel(i - (int)KeyCode.Keypad0);
-                        break;
-                    }
-                }
+                //for (int i = (int)KeyCode.Keypad1; i <= (int)KeyCode.Keypad9; i++)
+                //{
+                //    if (Input.GetKeyDown((KeyCode)i))
+                //    {
+                //        Application.LoadLevel(i - (int)KeyCode.Keypad0);
+                //        break;
+                //    }
+                //}
             }
 
             //if (Application.loadedLevel == 3)
