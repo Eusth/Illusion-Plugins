@@ -32,7 +32,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'PCDeploy|AnyCPU'">
-    <OutputPath>bin\PCDeploy\</OutputPath>
+    <OutputPath>D:\Novels\illusion\PlayClub\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>

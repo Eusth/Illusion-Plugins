@@ -147,7 +147,7 @@ namespace QuietLauncher
             bool isPatched = IsPatched(module);
             bool isVirtualized = IsVirtualized(module);
 
-            if (!isPatched || !isVirtualized)
+            if (!isPatched || !isVirtualized || !isSingletonized )
             {
                 // Make backup
                 input.CopyTo(backup);
@@ -174,6 +174,11 @@ namespace QuietLauncher
                 if (!isVirtualized)
                 {
                     Virtualize(module);
+                }
+
+                if (!isSingletonized)
+                {
+                    EliminateStaticClasses(module);
                 }
 
                 module.Write(input.FullName);
@@ -261,6 +266,123 @@ namespace QuietLauncher
 
         }
 
+        private static void EliminateStaticClasses(ModuleDefinition module)
+        {
+            foreach (var staticClass in module.Types.Where(type => type.HasMethods && !type.Name.Contains("Singleton") &&
+                type.Methods.All(m => m.IsStatic || m.IsConstructor )))
+            {
+                if (staticClass.Namespace == "ASA")
+                    EliminateStaticClass(staticClass);
+            
+            }
+            //Program.Fail("");
+        }
+
+        private static void EliminateStaticClass(TypeDefinition type)
+        {
+
+            var singletonClass = type.Module.GetType("ASA.SingletonClass`1");
+            var parentClass = MakeGenericType(singletonClass, type);
+            //MessageBox.Show("Singletonize " + type.Name + " with " + singletonClass.FullName);
+            type.BaseType = parentClass;
+           
+            var staticMethods = type.Methods.ToArray();
+            var instanceMethods = new List<MethodDefinition>();
+            var getInstance = new MethodReference("get_Instance", type, parentClass);
+
+            foreach (var staticMethod in staticMethods.Where(
+                m => m.IsStatic && !m.IsGetter && !m.IsSetter && !m.IsSpecialName
+            ))
+            {
+                
+                var instanceMethod = new MethodDefinition(staticMethod.Name, staticMethod.Attributes, staticMethod.ReturnType);
+
+                instanceMethod.Name = "_" + staticMethod.Name;
+                instanceMethod.IsStatic = false;
+                instanceMethod.HasThis = true;
+
+                foreach (var param in staticMethod.Parameters)
+                {
+                    //instanceMethod.Parameters.Add(new ParameterDefinition(param.Name, param.Attributes, param.ParameterType));
+                    instanceMethod.Parameters.Add(param);
+                }
+                foreach (var var in staticMethod.Body.Variables)
+                {
+                    //instanceMethod.Body.Variables.Add(new VariableDefinition(var.Name, var.VariableType));
+                    instanceMethod.Body.Variables.Add(var);
+                }
+
+                foreach (var genericParam in staticMethod.GenericParameters)
+                {
+                    instanceMethod.GenericParameters.Add(new GenericParameter(genericParam.Name, instanceMethod));
+                }
+                //staticMethod.Body.Variables.Clear();
+
+                foreach (var handler in staticMethod.Body.ExceptionHandlers)
+                {
+                    //instanceMethod.Body.ExceptionHandlers.Add(new ExceptionHandler(handler.HandlerType));
+                    instanceMethod.Body.ExceptionHandlers.Add(handler);
+                }
+                staticMethod.Body.ExceptionHandlers.Clear();
+
+
+                MethodReference instanceReference = staticMethod.HasGenericParameters ? MakeGenericMethod(instanceMethod, staticMethod.GenericParameters.ToArray()) : instanceMethod;
+
+
+                foreach (var instruction in staticMethod.Body.Instructions)
+                {
+                    if (instruction.OpCode == OpCodes.Ldarg_0) instruction.OpCode = OpCodes.Ldarg_1;
+                    else if (instruction.OpCode == OpCodes.Ldarg_1) instruction.OpCode = OpCodes.Ldarg_2;
+                    else if (instruction.OpCode == OpCodes.Ldarg_2) instruction.OpCode = OpCodes.Ldarg_3;
+                    else if (instruction.OpCode == OpCodes.Ldarg_3) { instruction.OpCode = OpCodes.Ldarg_S; instruction.Operand = staticMethod.Parameters[3]; }
+
+                    instanceMethod.Body.Instructions.Add(instruction);
+                }
+                instanceMethod.Body.InitLocals = staticMethod.Body.InitLocals;
+
+                staticMethod.Body.Instructions.Clear();
+                staticMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, getInstance));
+
+                for (int i = 0; i < staticMethod.Parameters.Count; i++)
+                {
+                    Instruction instruction = null;
+                    if (i == 0) instruction = Instruction.Create(OpCodes.Ldarg_0);
+                    if (i == 1) instruction = Instruction.Create(OpCodes.Ldarg_1);
+                    if (i == 2) instruction = Instruction.Create(OpCodes.Ldarg_2);
+                    if (i == 3) instruction = Instruction.Create(OpCodes.Ldarg_3);
+                    if (i >  3) instruction = Instruction.Create(OpCodes.Ldarg_S, staticMethod.Parameters[i]);
+
+                    staticMethod.Body.Instructions.Add(instruction);
+                }
+
+                staticMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Callvirt, instanceReference));
+                staticMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+                staticMethod.Body.Variables.Clear();
+
+                type.Methods.Add(instanceMethod);
+                instanceMethods.Add(instanceMethod);
+            }
+
+            //foreach (var method in instanceMethods)
+            //{
+            //    // Shift all ldargs by one
+            //    foreach (var instruction in method.Body.Instructions)
+            //    {
+            //        if (instruction.OpCode == OpCodes.Ldarg_0) instruction.OpCode = OpCodes.Ldarg_1;
+            //        else if (instruction.OpCode == OpCodes.Ldarg_1) instruction.OpCode = OpCodes.Ldarg_2;
+            //        else if (instruction.OpCode == OpCodes.Ldarg_2) instruction.OpCode = OpCodes.Ldarg_3;
+            //        else if (instruction.OpCode == OpCodes.Ldarg_3) { instruction.OpCode = OpCodes.Ldarg_S; instruction.Operand = method.Parameters[3]; }
+
+            //        //if (instruction.Operand is MethodReference && staticMethods.Contains(((MethodReference)instruction.Operand).Resolve()))
+            //        //{
+            //        //    int index = staticMethods.ToList().IndexOf(((MethodReference)instruction.Operand).Resolve());
+            //        //    instruction.Operand = instanceMethods[index];
+            //        //}
+            //    }
+
+            //}
+        }
+
         private static bool IsPatched(ModuleDefinition module)
         {
             foreach (var @ref in module.AssemblyReferences)
@@ -280,5 +402,38 @@ namespace QuietLauncher
             throw new Exception(reason);
         }
 
+
+        public static bool isSingletonized
+        {
+            get
+            {
+                return false;
+            }
+        }
+
+        public static GenericInstanceType MakeGenericType(TypeReference self, params TypeReference[] arguments)
+        {
+            if (self.GenericParameters.Count != arguments.Length)
+                throw new ArgumentException();
+
+            var instance = new GenericInstanceType(self);
+            foreach (var argument in arguments)
+                instance.GenericArguments.Add(argument);
+
+            return instance;
+        }
+
+        public static MethodReference MakeGenericMethod(MethodReference self, params TypeReference[] arguments)
+        {
+            if (self.GenericParameters.Count != arguments.Length)
+                throw new ArgumentException();
+
+            var instance = new GenericInstanceMethod(self);
+            foreach (var argument in arguments)
+                instance.GenericArguments.Add(argument);
+
+            return instance;
+        }
     }
+
 }
