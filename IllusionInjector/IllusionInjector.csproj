@@ -35,7 +35,7 @@
     <OutputPath>D:\Novels\illusion\HaremMate\HaremStudio_Data\Managed\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'PCDeploy|AnyCPU'">
-    <OutputPath>bin\PCDeploy\</OutputPath>
+    <OutputPath>D:\Novels\illusion\PlayClub\PlayClub_Data\Managed\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine">
       <HintPath>..\Lib\UnityEngine.dll</HintPath>
+      <Private>False</Private>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -52,6 +53,7 @@
     <Compile Include="PluginManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PluginComponent.cs" />
+    <Compile Include="Singleton.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\IllusionPlugin\IllusionPlugin.csproj">

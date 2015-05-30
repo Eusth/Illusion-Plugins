@@ -6,7 +6,6 @@ namespace IllusionInjector
     public static class Injector
     {
         private static bool injected = false;
-        private static bool initted = false;
         public static void Inject()
         {
             if (!injected)

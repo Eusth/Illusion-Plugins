@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Threading;
+using System.Runtime.Serialization;
 
 namespace QuietLauncher
 {
@@ -171,16 +172,19 @@ namespace QuietLauncher
 
                     awakeMethod.Body.Instructions.Insert(0, Instruction.Create(OpCodes.Call, methodReference));
                 }
+
+                if (!isSingletonized)
+                {
+                    EliminateStaticClasses(module, ModuleDefinition.ReadModule(injectorPath));
+                }
+
+
                 if (!isVirtualized)
                 {
                     Virtualize(module);
                 }
 
-                if (!isSingletonized)
-                {
-                    EliminateStaticClasses(module);
-                }
-
+              
                 module.Write(input.FullName);
 
                 Console.WriteLine("Successfully patched the file!");
@@ -266,56 +270,83 @@ namespace QuietLauncher
 
         }
 
-        private static void EliminateStaticClasses(ModuleDefinition module)
+        private static void EliminateStaticClasses(ModuleDefinition module, ModuleDefinition injectorModule)
         {
+            var singletonClass = module.Import(injectorModule.GetType("IllusionInjector.Singleton`1"));
+
             foreach (var staticClass in module.Types.Where(type => type.HasMethods && !type.Name.Contains("Singleton") &&
                 type.Methods.All(m => m.IsStatic || m.IsConstructor )))
             {
                 if (staticClass.Namespace == "ASA")
-                    EliminateStaticClass(staticClass);
+                    EliminateStaticClass(staticClass, singletonClass);
             
             }
             //Program.Fail("");
         }
 
-        private static void EliminateStaticClass(TypeDefinition type)
+        private static void EliminateStaticClass(TypeDefinition type, TypeReference singletonClass)
         {
-
-            var singletonClass = type.Module.GetType("ASA.SingletonClass`1");
+            var resolvedSingleto = singletonClass.Resolve(); 
+            //var singletonClass = type.Module.GetType("ASA.SingletonClass`1");
             var parentClass = MakeGenericType(singletonClass, type);
             //MessageBox.Show("Singletonize " + type.Name + " with " + singletonClass.FullName);
+            var references = type.Module.Types
+                                .SelectMany(t => t.Methods)
+                                .Where(m => m.Body != null)
+                                .SelectMany(m => m.Body.Instructions)
+                                .Where(i => (i.Operand is MethodReference) && ((MethodReference)i.Operand).DeclaringType.Resolve() == type)
+                                .Select(i => i.Operand as MethodReference)
+                                .ToArray();
+
             type.BaseType = parentClass;
            
             var staticMethods = type.Methods.ToArray();
             var instanceMethods = new List<MethodDefinition>();
-            var getInstance = new MethodReference("get_Instance", type, parentClass);
 
+            var getInstance =  type.Module.Import( singletonClass.Resolve().Methods.First(m => m.Name == "get_Instance") );
+            getInstance.DeclaringType = parentClass;
+
+            var constructor = type.Methods.First(m => m.IsSpecialName);
+            
+            constructor.Body.Instructions[1] =
+                Instruction.Create(OpCodes.Call, 
+                    MakeGeneric(type.Module.Import(parentClass.Resolve().Methods.First(m => m.IsConstructor)), type) );
+
+            int counter = 0;
+
+
+            Dictionary<MethodDefinition, MethodDefinition> methodMap = new Dictionary<MethodDefinition, MethodDefinition>();
             foreach (var staticMethod in staticMethods.Where(
                 m => m.IsStatic && !m.IsGetter && !m.IsSetter && !m.IsSpecialName
             ))
             {
-                
-                var instanceMethod = new MethodDefinition(staticMethod.Name, staticMethod.Attributes, staticMethod.ReturnType);
 
-                instanceMethod.Name = "_" + staticMethod.Name;
+                var instanceMethod = new MethodDefinition("_" + staticMethod.Name, staticMethod.Attributes, staticMethod.ReturnType);
                 instanceMethod.IsStatic = false;
                 instanceMethod.HasThis = true;
+                type.Methods.Add(instanceMethod);
+                instanceMethod.DeclaringType = type;
 
                 foreach (var param in staticMethod.Parameters)
                 {
                     //instanceMethod.Parameters.Add(new ParameterDefinition(param.Name, param.Attributes, param.ParameterType));
                     instanceMethod.Parameters.Add(param);
                 }
-                foreach (var var in staticMethod.Body.Variables)
-                {
-                    //instanceMethod.Body.Variables.Add(new VariableDefinition(var.Name, var.VariableType));
-                    instanceMethod.Body.Variables.Add(var);
-                }
 
                 foreach (var genericParam in staticMethod.GenericParameters)
                 {
-                    instanceMethod.GenericParameters.Add(new GenericParameter(genericParam.Name, instanceMethod));
+                    instanceMethod.GenericParameters.Add(CloneGenericParam(genericParam, instanceMethod) ) ;
+                    
                 }
+
+                foreach (var var in staticMethod.Body.Variables)
+                {
+                    //instanceMethod.Body.Variables.Add(new VariableDefinition(var.Name, var.VariableType));
+                    
+                    instanceMethod.Body.Variables.Add(var);
+                }
+
+              
                 //staticMethod.Body.Variables.Clear();
 
                 foreach (var handler in staticMethod.Body.ExceptionHandlers)
@@ -323,25 +354,40 @@ namespace QuietLauncher
                     //instanceMethod.Body.ExceptionHandlers.Add(new ExceptionHandler(handler.HandlerType));
                     instanceMethod.Body.ExceptionHandlers.Add(handler);
                 }
-                staticMethod.Body.ExceptionHandlers.Clear();
 
-
-                MethodReference instanceReference = staticMethod.HasGenericParameters ? MakeGenericMethod(instanceMethod, staticMethod.GenericParameters.ToArray()) : instanceMethod;
-
-
-                foreach (var instruction in staticMethod.Body.Instructions)
+                if (staticMethod.Name == "GetComponent")
                 {
+
+                }
+
+                foreach (var originalInstruction in staticMethod.Body.Instructions)
+                {
+                    var instruction = (originalInstruction);
                     if (instruction.OpCode == OpCodes.Ldarg_0) instruction.OpCode = OpCodes.Ldarg_1;
                     else if (instruction.OpCode == OpCodes.Ldarg_1) instruction.OpCode = OpCodes.Ldarg_2;
                     else if (instruction.OpCode == OpCodes.Ldarg_2) instruction.OpCode = OpCodes.Ldarg_3;
                     else if (instruction.OpCode == OpCodes.Ldarg_3) { instruction.OpCode = OpCodes.Ldarg_S; instruction.Operand = staticMethod.Parameters[3]; }
 
+                    if(staticMethod.CallingConvention == MethodCallingConvention.Generic && 
+                        instruction.Operand is GenericInstanceMethod) {
+                        var oldReference = instruction.Operand as GenericInstanceMethod;
+
+                        if (oldReference.HasGenericArguments && oldReference.GenericArguments[0] == staticMethod.GenericParameters[0] )
+                        {
+                            instruction.Operand = MakeGenericMethod( type.Module.Import(oldReference.Resolve()), instanceMethod.GenericParameters[0]); 
+                            //oldReference.GenericParameters.Add(instanceMethod.GenericParameters[0]);
+                            //oldReference.GenericArguments[0] = instanceMethod.GenericParameters[0];
+                            //oldReference.ReturnType = instanceMethod.GenericParameters[0];
+                        }
+                    }
                     instanceMethod.Body.Instructions.Add(instruction);
                 }
                 instanceMethod.Body.InitLocals = staticMethod.Body.InitLocals;
 
-                staticMethod.Body.Instructions.Clear();
+                var oldBody = staticMethod.Body;
+                staticMethod.Body = new MethodBody(staticMethod);
                 staticMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, getInstance));
+                MethodReference instanceReference = staticMethod.HasGenericParameters ? MakeGenericMethod(instanceMethod, staticMethod.GenericParameters.ToArray()) : instanceMethod;
 
                 for (int i = 0; i < staticMethod.Parameters.Count; i++)
                 {
@@ -350,39 +396,57 @@ namespace QuietLauncher
                     if (i == 1) instruction = Instruction.Create(OpCodes.Ldarg_1);
                     if (i == 2) instruction = Instruction.Create(OpCodes.Ldarg_2);
                     if (i == 3) instruction = Instruction.Create(OpCodes.Ldarg_3);
-                    if (i >  3) instruction = Instruction.Create(OpCodes.Ldarg_S, staticMethod.Parameters[i]);
+                    if (i > 3) instruction = Instruction.Create(OpCodes.Ldarg_S, staticMethod.Parameters[i]);
 
                     staticMethod.Body.Instructions.Add(instruction);
                 }
 
                 staticMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Callvirt, instanceReference));
-                staticMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
-                staticMethod.Body.Variables.Clear();
+                //staticMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldnull));
 
-                type.Methods.Add(instanceMethod);
-                instanceMethods.Add(instanceMethod);
+                staticMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+
             }
 
-            //foreach (var method in instanceMethods)
-            //{
-            //    // Shift all ldargs by one
-            //    foreach (var instruction in method.Body.Instructions)
-            //    {
-            //        if (instruction.OpCode == OpCodes.Ldarg_0) instruction.OpCode = OpCodes.Ldarg_1;
-            //        else if (instruction.OpCode == OpCodes.Ldarg_1) instruction.OpCode = OpCodes.Ldarg_2;
-            //        else if (instruction.OpCode == OpCodes.Ldarg_2) instruction.OpCode = OpCodes.Ldarg_3;
-            //        else if (instruction.OpCode == OpCodes.Ldarg_3) { instruction.OpCode = OpCodes.Ldarg_S; instruction.Operand = method.Parameters[3]; }
+            foreach (var reference in references)
+            {
+                //var oldMethod = reference.Operand as MethodReference;
+                //var newMethod = type.Methods.FirstOrDefault(method => method.Name == oldMethod.Name
+                //                          && method.Parameters.Select(p => p.ParameterType.Name).SequenceEqual(oldMethod.Parameters.Select(p => p.ParameterType.Name))
+                //    //&& method.GenericParameters.Count == oldMethod.GenericParameters.Count
+                //);
+                //if (newMethod == null) throw new Exception("Did not find new method: " + oldMethod.FullName);
+                try
+                {
+                    reference.DeclaringType = type;
+                }
+                catch (Exception e)
+                {
+                    counter++;
+                }
+            }
 
-            //        //if (instruction.Operand is MethodReference && staticMethods.Contains(((MethodReference)instruction.Operand).Resolve()))
-            //        //{
-            //        //    int index = staticMethods.ToList().IndexOf(((MethodReference)instruction.Operand).Resolve());
-            //        //    instruction.Operand = instanceMethods[index];
-            //        //}
-            //    }
-
-            //}
+            //MessageBox.Show(counter + " / " + references.Length + " failed");
         }
 
+        private static GenericParameter CloneGenericParam(GenericParameter genericParam, MethodDefinition owner)
+        {
+            var newParam = new GenericParameter(genericParam.Name, owner);
+
+            foreach (var constraint in genericParam.Constraints)
+                newParam.Constraints.Add(constraint);
+
+            return newParam;
+        }
+
+        private static Instruction CopyInstruction(Instruction instruction)
+        {
+            var copy = FormatterServices.GetUninitializedObject(typeof(Instruction)) as Instruction;
+            copy.OpCode = instruction.OpCode;
+            copy.Operand = instruction.Operand;
+
+            return copy;
+        }
         private static bool IsPatched(ModuleDefinition module)
         {
             foreach (var @ref in module.AssemblyReferences)
@@ -434,6 +498,26 @@ namespace QuietLauncher
 
             return instance;
         }
+
+        public static MethodReference MakeGeneric(MethodReference self, params TypeReference[] arguments)
+        {
+            var reference = new MethodReference(self.Name, self.ReturnType)
+            {
+                DeclaringType = MakeGenericType(self.DeclaringType, arguments),
+                HasThis = self.HasThis,
+                ExplicitThis = self.ExplicitThis,
+                CallingConvention = self.CallingConvention,
+            };
+
+            foreach (var parameter in self.Parameters)
+                reference.Parameters.Add(new ParameterDefinition(parameter.ParameterType));
+
+            foreach (var generic_parameter in self.GenericParameters)
+                reference.GenericParameters.Add(new GenericParameter(generic_parameter.Name, reference));
+
+            return reference;
+        }
+
     }
 
 }
