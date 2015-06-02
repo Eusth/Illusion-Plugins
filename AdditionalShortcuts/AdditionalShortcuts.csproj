@@ -39,9 +39,8 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Assembly-CSharp-PlayClub">
-      <HintPath>..\Lib\Assembly-CSharp-PlayClub.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="Assembly-CSharp-PlayClubModded">
+      <HintPath>..\Lib\Assembly-CSharp-PlayClubModded.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -68,7 +67,6 @@
     <ProjectReference Include="..\IllusionPlugin\IllusionPlugin.csproj">
       <Project>{e2848bfb-5432-42f4-8ae0-d2ec0cdf2f71}</Project>
       <Name>IllusionPlugin</Name>
-      <Private>False</Private>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

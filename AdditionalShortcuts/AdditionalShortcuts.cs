@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace AdditionalShortcuts
@@ -24,8 +25,15 @@ namespace AdditionalShortcuts
                 { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sIncreaseActionSpeed", "F", true)), IncreaseActionSpeed },
                 { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sSaySomething", "V", true)), SaySomething },
                 { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sEjaculate", "C", true)), Ejaculate },
-                { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sFreeze", "M", true)), Freeze }
+                { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sFreeze", "M", true)), Freeze },
+
+                { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sNextPose", "Alt+Right", true)), () => ChangePose(1) },
+                { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sPrevPose", "Alt+Left", true)), () => ChangePose(-1) },
+                { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sRandPose", "Alt+Down", true)),  () => RandomPose(false) },
+                { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sRandPoseFromAll", "", true)), () => RandomPose(true) },
+
             };
+
         }
 
         public string Name
@@ -35,7 +43,7 @@ namespace AdditionalShortcuts
 
         public string Version
         {
-            get { return "0.2"; }
+            get { return "0.3"; }
         }
 
 
@@ -64,20 +72,18 @@ namespace AdditionalShortcuts
         private void ToggleOrgasmLock()
         {
             //Console.WriteLine(!scene.FemaleGage.Lock ? "Lock" : "Unlock");
-
             // This also updates the GUI!
             GameObject.Find("XtcLock").GetComponent<Toggle>().isOn = !scene.FemaleGage.Lock;
             //scene.FemaleGage.ChangeLock(!scene.FemaleGage.Lock);
         }
 
         private void TogglePiston() {
-            var piston = GameObject.Find("Piston").GetComponent<Toggle>();
-            piston.isOn = !piston.isOn;
+            scene.Pad.pistonToggle.OnPointerClick(new PointerEventData(EventSystem.current));
+
         }
 
         private void ToggleGrind() {
-            var grind = GameObject.Find("Grind").GetComponent<Toggle>();
-            grind.isOn = !grind.isOn;
+            scene.Pad.grindToggle.OnPointerClick(new PointerEventData(EventSystem.current));
         }
 
         private void IncreaseActionSpeed()
@@ -110,6 +116,32 @@ namespace AdditionalShortcuts
                 var sotodashi = GameObject.Find("Button_Out").GetComponent<Button>();
                 sotodashi.onClick.Invoke();
             }
+        }
+
+        private void ChangePose(int direction)
+        {
+            int currentIndex = scene.StyleMgr.StyleList.IndexOf(scene.StyleMgr.nowStyle);
+            int nextIndex = ((currentIndex + scene.StyleMgr.StyleList.Count) + direction) % scene.StyleMgr.StyleList.Count;
+
+            ChangeStyle(scene.StyleMgr.StyleList[nextIndex].file);
+        }
+
+        private void RandomPose(bool chooseFromAll = false)
+        {
+            // the dictionary contains positions from all characters.
+            var list = chooseFromAll
+                ? scene.StyleMgr.StyleDictionary.Values.ToList()
+                : scene.StyleMgr.StyleList;
+
+            // Pick random one
+            ChangeStyle(list[UnityEngine.Random.Range(0, list.Count)].file);
+        }
+
+        private void ChangeStyle(string name)
+        {
+            scene.ChangeStyle(name);
+            scene.StyleToGUI(name);
+            scene.CrossFadeStart();
         }
 
 

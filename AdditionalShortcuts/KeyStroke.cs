@@ -25,7 +25,7 @@ namespace AdditionalShortcuts
         public KeyStroke(string strokeString)
         {
             var strokes = strokeString.ToUpper()
-                .Split('+')
+                .Split('+', '-')
                 .Select(key => key.Trim()).ToArray();
 
             for (int i = 0; i < strokes.Length; i++)
@@ -49,6 +49,11 @@ namespace AdditionalShortcuts
                             {
                                 stroke = "Alpha" + stroke;
                             }
+                            if (Regex.IsMatch(stroke, @"^(LEFT|RIGHT|UP|DOWN)$"))
+                            {
+                                stroke += "ARROW";
+                            }
+                                
                             AddStroke((KeyCode)Enum.Parse(typeof(KeyCode), stroke, true));
                         }
                         catch (Exception) {
@@ -93,6 +98,13 @@ namespace AdditionalShortcuts
             return modifiers.All(key => Input.GetKey(key))
                 && keys.All(key => keyDown ? Input.GetKeyDown(key) : Input.GetKey(key))
                 && MODIFIER_LIST.Except(modifiers).All(invalidModifier => !Input.GetKey(invalidModifier));
+        }
+
+        public override string ToString()
+        {
+            return string.Join("+", modifiers.Select(m => m.ToString()).Union(
+                                        keys.Select(k => k.ToString())
+                                    ).ToArray());
         }
     }
 }
