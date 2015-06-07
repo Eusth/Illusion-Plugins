@@ -24,88 +24,92 @@ namespace QuietLauncher
         [STAThread]
         static void Main()
         {
-            var execPath = Application.ExecutablePath;
-            var fileName = Path.GetFileNameWithoutExtension(execPath);
-            if (fileName.IndexOf("VR") == -1 && fileName.IndexOf("_") == -1) return;
-
-            bool vrMode = fileName.IndexOf("VR") > 0;
-            bool directMode = Application.ExecutablePath.EndsWith("_DirectToRift.exe");
-            string baseName = execPath.Substring(0, vrMode
-                                                    ? execPath.LastIndexOf("VR")
-                                                    : execPath.LastIndexOf("_"));
-
-            string executable = baseName + ".exe";
-            var file = new FileInfo(executable);
-            if (file.Exists)
-            {
-                var args = Environment.GetCommandLineArgs().ToList();
-                bool created = false;
-
-                var dataFolder = Path.GetFileNameWithoutExtension(file.Name) + "_Data";
-                var assemblyPath = Path.Combine(Path.Combine(dataFolder, "Managed"), "Assembly-CSharp.dll");
-                var directToRiftPath = baseName + "_DirectToRift.exe";
-
-                try
+            try {
+                var execPath = Application.ExecutablePath;
+                var fileName = Path.GetFileNameWithoutExtension(execPath);
+                if (fileName.IndexOf("VR") == -1 && fileName.IndexOf("_") == -1) return;
+    
+                bool vrMode = fileName.IndexOf("VR") > 0;
+                bool directMode = Application.ExecutablePath.EndsWith("_DirectToRift.exe");
+                string baseName = execPath.Substring(0, vrMode
+                                                        ? execPath.LastIndexOf("VR")
+                                                        : execPath.LastIndexOf("_"));
+    
+                string executable = baseName + ".exe";
+                var file = new FileInfo(executable);
+                if (file.Exists)
                 {
-                    if (directMode)
-                    {
-                        //args[Array.IndexOf(args, "--direct")] = "-force-d3d11";
-
-
-                        if (!File.Exists(directToRiftPath))
-                        {
-                            File.WriteAllBytes(directToRiftPath, Resources.DirectToRift);
-                            created = true;
-                        }
-
-                        file = new FileInfo(directToRiftPath);
-                    }
-
-
-                    if (vrMode) args.Add("--vr");
-                    var arguments = string.Join(" ", args.ToArray());
-
+                    var args = Environment.GetCommandLineArgs().ToList();
+                    bool created = false;
+    
+                    var dataFolder = Path.GetFileNameWithoutExtension(file.Name) + "_Data";
+                    var assemblyPath = Path.Combine(Path.Combine(dataFolder, "Managed"), "Assembly-CSharp.dll");
+                    var directToRiftPath = baseName + "_DirectToRift.exe";
+    
                     try
                     {
-                        Patch(assemblyPath);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-
-                    Process.Start(file.FullName, arguments);
-
-                }
-                finally
-                {
-                    if (created && directMode)
-                    {
-                        var thread = new Thread(new ThreadStart(delegate
+                        if (directMode)
                         {
-                            int attempts = 0;
-                            while (File.Exists(directToRiftPath) && attempts++ < 20)
+                            //args[Array.IndexOf(args, "--direct")] = "-force-d3d11";
+    
+    
+                            if (!File.Exists(directToRiftPath))
                             {
-                                Thread.Sleep(1000);
-                                try
-                                {
-                                    File.Delete(directToRiftPath);
-                                }
-                                catch (Exception ex)
-                                {
-
-                                }
+                                File.WriteAllBytes(directToRiftPath, Resources.DirectToRift);
+                                created = true;
                             }
-                        }));
-                        thread.Start();
-                        thread.Join();
-                        // Clean up
+    
+                            file = new FileInfo(directToRiftPath);
+                        }
+    
+    
+                        if (vrMode) args.Add("--vr");
+                        var arguments = string.Join(" ", args.ToArray());
+    
+                        try
+                        {
+                            Patch(assemblyPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+    
+                        Process.Start(file.FullName, arguments);
+    
+                    }
+                    finally
+                    {
+                        if (created && directMode)
+                        {
+                            var thread = new Thread(new ThreadStart(delegate
+                            {
+                                int attempts = 0;
+                                while (File.Exists(directToRiftPath) && attempts++ < 20)
+                                {
+                                    Thread.Sleep(1000);
+                                    try
+                                    {
+                                        File.Delete(directToRiftPath);
+                                    }
+                                    catch (Exception ex)
+                                    {
+    
+                                    }
+                                }
+                            }));
+                            thread.Start();
+                            thread.Join();
+                            // Clean up
+                        }
                     }
                 }
-            }
-            else
-            {
-                MessageBox.Show("Could not find: " + file.FullName, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                else
+                {
+                    MessageBox.Show("Could not find: " + file.FullName, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            } catch(Exception globalException) {
+                MessageBox.Show(globalException.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             
         }
