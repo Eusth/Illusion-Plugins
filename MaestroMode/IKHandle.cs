@@ -1,4 +1,4 @@
-﻿using RootMotion.FinalIK;
+using RootMotion.FinalIK;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -129,6 +129,16 @@ namespace MaestroMode
             _prevMousePos = pos;
 
             transform.rotation = Quaternion.AngleAxis(delta.y, camera.transform.right) * Quaternion.AngleAxis(-delta.x, camera.transform.up) * transform.rotation;
+        }
+
+        public void Select()
+        {
+            _material.color = activeColor;
+        }
+
+        public void Deselect()
+        {
+            _material.color = inactiveColor;
         }
 
         public void OnMouseDown(int mouseButton)
