@@ -1,4 +1,4 @@
-﻿using IllusionPlugin;
+using IllusionPlugin;
 using RootMotion;
 using RootMotion.FinalIK;
 using System;
@@ -27,8 +27,14 @@ namespace MaestroMode
 
         private H_Style _currentStyle;
 
+        private int currentKeyboardHandle = 0;
+
         private readonly KeyStroke _toggleMaestroKey = new KeyStroke(ModPrefs.GetString("Maestro Mode", "sToggleMaestroKey", "F9", true));
         private readonly KeyStroke _toggleSimpleMaestroKey = new KeyStroke(ModPrefs.GetString("Maestro Mode", "sToggleSimpleMaestroeKey", "F10", true));
+
+        private readonly KeyStroke _nextHandleKey = new KeyStroke(ModPrefs.GetString("Maestro Mode", "sNextHandleKey", "G", true));
+        private readonly KeyStroke _prevHandleKey = new KeyStroke(ModPrefs.GetString("Maestro Mode", "sPrevHandleKey", "Shift+G", true));
+        private readonly KeyStroke _moveHandleKey = new KeyStroke(ModPrefs.GetString("Maestro Mode", "sMoveHandleKey", "H", true));
 
         private Dictionary<HumanBodyBones, string> IK_MAPPING = new Dictionary<HumanBodyBones, string>()
         {
@@ -151,22 +157,83 @@ namespace MaestroMode
 
                 if (_visible)
                 {
-                   
                     if (Input.GetMouseButtonDown(0))
                     {
-                        var handle = GetIKHandle();
+                        IKHandle handle = null;
+
+                        if (_moveHandleKey.Check(false))
+                        {
+                            handle = _handles[currentKeyboardHandle];
+                        }
+                        else
+                        {
+                            handle = GetIKHandle();
+                        }
+
                         if (handle) handle.OnMouseDown(0);
                     }
                     else if (Input.GetMouseButtonDown(1))
                     {
-                        var handle = GetIKHandle();
+                        IKHandle handle = null;
+
+                        if (_moveHandleKey.Check(false))
+                        {
+                            handle = _handles[currentKeyboardHandle];
+                        }
+                        else
+                        {
+                            handle = GetIKHandle();
+                        }
+
                         if (handle) handle.OnMouseDown(1);
                     }
                     else if (Input.GetMouseButtonUp(2))
                     {
-                        var handle = GetIKHandle();
+                        IKHandle handle = null;
+
+                        if (_moveHandleKey.Check(false))
+                        {
+                            handle = _handles[currentKeyboardHandle];
+                        }
+                        else
+                        {
+                            handle = GetIKHandle();
+                        }
+
                         if (handle) handle.Reset();
                     }
+                }
+
+                if (_nextHandleKey.Check())
+                {
+                    var handle = _handles[currentKeyboardHandle];
+                    if (handle) handle.Deselect();
+
+                    currentKeyboardHandle++;
+
+                    if (currentKeyboardHandle >= _handles.Count)
+                    {
+                        currentKeyboardHandle = 0;
+                    }
+
+                    handle = _handles[currentKeyboardHandle];
+                    if (handle) handle.Select();
+                }
+
+                if (_prevHandleKey.Check())
+                {
+                    var handle = _handles[currentKeyboardHandle];
+                    if (handle) handle.Deselect();
+
+                    currentKeyboardHandle--;
+
+                    if (currentKeyboardHandle < 0)
+                    {
+                        currentKeyboardHandle = _handles.Count - 1;
+                    }
+
+                    handle = _handles[currentKeyboardHandle];
+                    if (handle) handle.Select();
                 }
 
                 if (_toggleMaestroKey.Check())
