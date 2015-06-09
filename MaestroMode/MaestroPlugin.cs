@@ -27,7 +27,7 @@ namespace MaestroMode
 
         private H_Style _currentStyle;
 
-        private int currentKeyboardHandle = 0;
+        private int _currentKeyboardHandle = 0;
 
         private readonly KeyStroke _toggleMaestroKey = new KeyStroke(ModPrefs.GetString("Maestro Mode", "sToggleMaestroKey", "F9", true));
         private readonly KeyStroke _toggleSimpleMaestroKey = new KeyStroke(ModPrefs.GetString("Maestro Mode", "sToggleSimpleMaestroeKey", "F10", true));
@@ -69,6 +69,7 @@ namespace MaestroMode
             _scene = null;
             _camera = null;
             _handles.Clear();
+            _currentKeyboardHandle = 0;
         }
 
         public void OnLevelWasInitialized(int level)
@@ -163,7 +164,7 @@ namespace MaestroMode
 
                         if (_moveHandleKey.Check(false))
                         {
-                            handle = _handles[currentKeyboardHandle];
+                            handle = _handles[_currentKeyboardHandle];
                         }
                         else
                         {
@@ -178,7 +179,7 @@ namespace MaestroMode
 
                         if (_moveHandleKey.Check(false))
                         {
-                            handle = _handles[currentKeyboardHandle];
+                            handle = _handles[_currentKeyboardHandle];
                         }
                         else
                         {
@@ -193,7 +194,7 @@ namespace MaestroMode
 
                         if (_moveHandleKey.Check(false))
                         {
-                            handle = _handles[currentKeyboardHandle];
+                            handle = _handles[_currentKeyboardHandle];
                         }
                         else
                         {
@@ -206,33 +207,33 @@ namespace MaestroMode
 
                 if (_nextHandleKey.Check())
                 {
-                    var handle = _handles[currentKeyboardHandle];
+                    var handle = _handles[_currentKeyboardHandle];
                     if (handle) handle.Deselect();
 
-                    currentKeyboardHandle++;
+                    _currentKeyboardHandle++;
 
-                    if (currentKeyboardHandle >= _handles.Count)
+                    if (_currentKeyboardHandle >= _handles.Count)
                     {
-                        currentKeyboardHandle = 0;
+                        _currentKeyboardHandle = 0;
                     }
 
-                    handle = _handles[currentKeyboardHandle];
+                    handle = _handles[_currentKeyboardHandle];
                     if (handle) handle.Select();
                 }
 
                 if (_prevHandleKey.Check())
                 {
-                    var handle = _handles[currentKeyboardHandle];
+                    var handle = _handles[_currentKeyboardHandle];
                     if (handle) handle.Deselect();
 
-                    currentKeyboardHandle--;
+                    _currentKeyboardHandle--;
 
-                    if (currentKeyboardHandle < 0)
+                    if (_currentKeyboardHandle < 0)
                     {
-                        currentKeyboardHandle = _handles.Count - 1;
+                        _currentKeyboardHandle = _handles.Count - 1;
                     }
 
-                    handle = _handles[currentKeyboardHandle];
+                    handle = _handles[_currentKeyboardHandle];
                     if (handle) handle.Select();
                 }
 

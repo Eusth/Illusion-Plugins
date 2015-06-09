@@ -138,7 +138,7 @@ namespace MaestroMode
 
         public void Deselect()
         {
-            _material.color = inactiveColor;
+            _material.color = _changed ? changedColor : inactiveColor;
         }
 
         public void OnMouseDown(int mouseButton)
