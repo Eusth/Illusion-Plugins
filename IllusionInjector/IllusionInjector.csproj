@@ -35,7 +35,7 @@
     <OutputPath>D:\Novels\illusion\HaremMate\HaremStudio_Data\Managed\</OutputPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'PCDeploy|AnyCPU'">
-    <OutputPath>bin\PCDeploy\</OutputPath>
+    <OutputPath>D:\Novels\illusion\PlayClub\PlayClub_Data\Managed\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />

@@ -54,5 +54,10 @@ namespace IllusionInjector
             freshlyLoaded = true;
         }
 
+        void OnLateUpdate()
+        {
+            plugins.OnLateUpdate();
+        }
+
     }
 }

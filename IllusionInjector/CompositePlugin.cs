@@ -9,11 +9,12 @@ namespace IllusionInjector
     class CompositePlugin : IPlugin
     {
         IEnumerable<IPlugin> plugins;
+
         private delegate void CompositeCall(IPlugin plugin);
 
         public CompositePlugin(IEnumerable<IPlugin> plugins)
         {
-            this.plugins = plugins;
+            this.plugins = plugins;  
         }
 
         public void OnApplicationStart()
@@ -94,6 +95,15 @@ namespace IllusionInjector
         public string Version
         {
             get { throw new NotImplementedException(); }
+        }
+
+        public void OnLateUpdate()
+        {
+            Invoke(plugin =>
+            {
+                if (plugin is IEnhancedPlugin)
+                    ((IEnhancedPlugin)plugin).OnLateUpdate();
+            });
         }
     }
 }

@@ -13,19 +13,20 @@ namespace IllusionInjector
         public static IEnumerable<IPlugin> LoadPlugins()
         {
             string pluginDirectory = Path.Combine(Environment.CurrentDirectory, "Plugins");
-
-
+            string exeName = (System.Diagnostics.Process.GetCurrentProcess().ProcessName);
+            
             if (!Directory.Exists(pluginDirectory)) return new IPlugin[0];
-
+            
             String[] files = Directory.GetFiles(pluginDirectory, "*.dll");
             List<IPlugin> plugins = new List<IPlugin>();
             foreach (var s in files)
             {
-                plugins.AddRange(LoadPluginsFromFile(Path.Combine(pluginDirectory, s)));
+                plugins.AddRange(LoadPluginsFromFile(Path.Combine(pluginDirectory, s), exeName));
             }
             
 
             // DEBUG
+            Console.WriteLine("-----------------------------");
             Console.WriteLine("Loading plugins from {0} and found {1}", pluginDirectory, plugins.Count);
             Console.WriteLine("-----------------------------");
             foreach (var plugin in plugins)
@@ -33,12 +34,13 @@ namespace IllusionInjector
 
                 Console.WriteLine(" {0}: {1}", plugin.Name, plugin.Version);
             }
+            Console.WriteLine("-----------------------------");
             // ---
 
             return plugins;
         }
 
-        private static IEnumerable<IPlugin> LoadPluginsFromFile(string file)
+        private static IEnumerable<IPlugin> LoadPluginsFromFile(string file, string exeName)
         {
             List<IPlugin> plugins = new List<IPlugin>();
 
@@ -55,9 +57,17 @@ namespace IllusionInjector
                     {
                         try
                         {
-                            IPlugin pluginInstance = Activator.CreateInstance(t) as IPlugin;
 
-                            plugins.Add(pluginInstance);
+                            IPlugin pluginInstance = Activator.CreateInstance(t) as IPlugin;
+                            string[] filter = null;
+
+                            if (pluginInstance is IEnhancedPlugin)
+                            {
+                                filter = ((IEnhancedPlugin)pluginInstance).Filter;
+                            }
+
+                            if(filter == null || new List<string>(filter).Contains(exeName))
+                                plugins.Add(pluginInstance);
                             //return;
                         }
                         catch (Exception)
