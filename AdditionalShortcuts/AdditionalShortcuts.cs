@@ -25,6 +25,10 @@ namespace AdditionalShortcuts
                 { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sIncreaseActionSpeed", "F", true)), IncreaseActionSpeed },
                 { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sSaySomething", "V", true)), SaySomething },
                 { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sEjaculate", "C", true)), Ejaculate },
+                { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sEjaculateOutside", "", true)), EjaculateOutside },
+                { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sEjaculateInside", "", true)), EjaculateInside },
+                { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sOrgasmFemale", "", true)), EjaculateFemale },
+                { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sOrgasmBoth", "", true)), EjaculateBoth },
                 { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sFreeze", "M", true)), Freeze },
 
                 { new KeyStroke( ModPrefs.GetString("Additional Shortcuts", "sNextPose", "Alt+Right", true)), () => ChangePose(1) },
@@ -43,7 +47,7 @@ namespace AdditionalShortcuts
 
         public string Version
         {
-            get { return "0.3"; }
+            get { return "0.4"; }
         }
 
 
@@ -108,15 +112,35 @@ namespace AdditionalShortcuts
         {
             if (scene.FemaleGage.IsHigh())
             {
-                var synced = GameObject.Find("Button_Sync").GetComponent<Button>();
-                synced.onClick.Invoke();
+                scene.Pad.XTC_Sync();
             }
             else
             {
-                var sotodashi = GameObject.Find("Button_Out").GetComponent<Button>();
-                sotodashi.onClick.Invoke();
+                scene.Pad.XTC_Out();
             }
         }
+
+        private void EjaculateInside()
+        {
+            scene.Pad.XTC_In();
+        }
+
+        private void EjaculateOutside()
+        {
+            scene.Pad.XTC_Out();
+        }
+
+        private void EjaculateBoth()
+        {
+            scene.Pad.XTC_Sync();
+        }
+
+        private void EjaculateFemale()
+        {
+            scene.Pad.XTC_Female();
+        }
+
+
 
         private void ChangePose(int direction)
         {

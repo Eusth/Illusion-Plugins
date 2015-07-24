@@ -15,7 +15,7 @@ namespace CameraModifications
         public H_Scene h_scene;
         public H_EditsUIControl controls;
         private GameObject buttonPrefab;
-        public WatchDog watchDog;
+        public KocchiMitePlugin watchDog;
         private Toggle m_toggle;
         private UI_ShowCanvasGroup group;
         private int currentValue = -1;

@@ -11,47 +11,6 @@ using UnityEngine.UI;
 
 namespace CameraModifications
 {
-    public class Modifications : IPlugin
-    {
-        public string Name
-        {
-            get { return "Camera Modifications"; }
-        }
-
-        public string Version
-        {
-            get { return "0.5"; }
-        }
-
-        public void OnApplicationStart()
-        {
-            var watchDog = new GameObject().AddComponent<WatchDog>();
-            GameObject.DontDestroyOnLoad(watchDog.gameObject);
-
-        }
-
-        public void OnApplicationQuit()
-        {
-        }
-
-        public void OnLevelWasLoaded(int level)
-        {
-        }
-
-        public void OnLevelWasInitialized(int level)
-        {
-        }
-
-
-        public void OnUpdate()
-        {
-        }
-
-        public void OnFixedUpdate()
-        {
-        }
-    }
-
     internal enum CameraMode
     {
         None,
@@ -66,8 +25,23 @@ namespace CameraModifications
         public bool IsChecked = true;
     }
 
-    public class WatchDog : MonoBehaviour
+    public class KocchiMitePlugin : IEnhancedPlugin
     {
+        public string Name
+        {
+            get { return "Camera Modifications"; }
+        }
+
+        public string Version
+        {
+            get { return "0.6"; }
+        }
+
+
+        public string[] Filter
+        {
+            get { return new string[] { "PlayClub", "PlayClubStudio" }; }
+        }
         
         public readonly int LOOK_TYPES = Enum.GetNames(typeof(LookAtRotator.TYPE)).Count();
         public int currentType = 0;
@@ -92,6 +66,22 @@ namespace CameraModifications
         internal LookInfo oldHeadLook = new LookInfo();
         internal LookInfo oldEyeLook = new LookInfo();
 
+        private List<Human> _humans = new List<Human>();
+        private bool _humanDirty = true;
+
+        public List<Human> Humans
+        {
+            get
+            {
+                if (m_scene) return m_scene.Members;
+                if (_humanDirty)
+                {
+                    _humans = GameObject.FindObjectsOfType<Human>().ToList();
+                    _humanDirty = false;
+                }
+                return _humans;
+            }
+        }
 
         private IllusionCamera illusionCamera;
         public Vector3 lockOffset = new Vector3(0, 0.1f, 0);
@@ -110,13 +100,6 @@ namespace CameraModifications
         private KeyStroke m_RotateCameraInverseKey = new KeyStroke(ModPrefs.GetString("Camera", "sRotateCameraInverseKey", "Shift+Tab", true));
         private KeyStroke m_ToggleDynamicCameraKey = new KeyStroke(ModPrefs.GetString("Camera", "sToggleDynamicCameraKey", "Ctrl+Tab", true));
 
-        public void Start()
-        {
-            m_minSpeed = ModPrefs.GetFloat("Camera", "fMinSpeed", 10, true);
-            m_maxSpeed = ModPrefs.GetFloat("Camera", "fMaxSpeed", 180, true);
-            m_cameraAcceleration = ModPrefs.GetFloat("Camera", "fCameraAcceleration", 5, true);
-            useEnglish = ModPrefs.GetBool("Camera", "bUseEnglish", Application.systemLanguage != SystemLanguage.Japanese, true);
-        }
 
         private LookAtRotator.TYPE LookType
         {
@@ -130,9 +113,17 @@ namespace CameraModifications
             set { currentHeadType = (int)value; }
         }
 
-        public void Update()
+        public void OnApplicationStart()
         {
-            if (m_scene)
+            m_minSpeed = ModPrefs.GetFloat("Camera", "fMinSpeed", 10, true);
+            m_maxSpeed = ModPrefs.GetFloat("Camera", "fMaxSpeed", 180, true);
+            m_cameraAcceleration = ModPrefs.GetFloat("Camera", "fCameraAcceleration", 5, true);
+            useEnglish = ModPrefs.GetBool("Camera", "bUseEnglish", Application.systemLanguage != SystemLanguage.Japanese, true);
+        }
+
+        public void OnUpdate()
+        {
+            if (illusionCamera)
             {
                 try
                 {
@@ -147,9 +138,10 @@ namespace CameraModifications
                 }
 
             }
+
+            _humanDirty = true;
         }
 
-       
         private void HandleKeys()
         {
             try
@@ -190,7 +182,8 @@ namespace CameraModifications
                     {
                         if (m_mode == CameraMode.Lock)
                         {
-                            m_scene.camPosMgr.Change(m_scene.StyleMgr.nowStyle);
+                            if(m_scene)
+                                m_scene.camPosMgr.Change(m_scene.StyleMgr.nowStyle);
                             DisableLock();
                         }
 
@@ -218,9 +211,11 @@ namespace CameraModifications
                         m_head.enabled = false;
                         m_lockIndex++;
 
-                        if(m_lockIndex >= m_scene.Members.Count) {
+                        if(m_lockIndex >= Humans.Count) {
                             m_mode = CameraMode.None;
-                            m_scene.camPosMgr.Change(m_scene.StyleMgr.nowStyle);
+
+                            if (m_scene)
+                                m_scene.camPosMgr.Change(m_scene.StyleMgr.nowStyle);
                             return;
                         }
                     } else {
@@ -229,7 +224,7 @@ namespace CameraModifications
                     }
 
                     // Get and hide head
-                    var member = m_scene.Members[m_lockIndex];
+                    var member = Humans[m_lockIndex];
                     var head = member.headObjRoot.GetComponentsInParent<Transform>().First(t => t.name.StartsWith("c") && t.name.Contains("J_Head"));
                     m_head = head.GetComponent<InvisibleHead>();
                     if (m_head == null)
@@ -295,10 +290,10 @@ namespace CameraModifications
         {
             if (m_nextMotion != null)
                 m_motion = m_nextMotion;
-            m_nextMotion = new CameraMotion(m_scene.Members.First(m => m.sex == Human.SEX.FEMALE));
+            m_nextMotion = new CameraMotion(Humans.First(m => m.sex == Human.SEX.FEMALE));
 
             if (m_motion == null)
-                m_motion = new CameraMotion(m_scene.Members.First(m => m.sex == Human.SEX.FEMALE));
+                m_motion = new CameraMotion(Humans.First(m => m.sex == Human.SEX.FEMALE));
 
             illusionCamera.Set(
                 m_motion.Focus,
@@ -356,7 +351,7 @@ namespace CameraModifications
         private void UpdateLook()
         {
             
-            foreach (var female in m_scene.Members.Where(m => m.sex == Human.SEX.FEMALE))
+            foreach (var female in Humans.Where(m => m.sex == Human.SEX.FEMALE))
             {
               
 
@@ -410,58 +405,6 @@ namespace CameraModifications
             
         }
 
-        public IEnumerator OnLevelWasLoaded(int i)
-        {
-           
-            m_scene = GameObject.FindObjectOfType<H_Scene>();
-            LookType = LookAtRotator.TYPE.NO;
-            HeadLookType = LookAtRotator.TYPE.NO;
-            m_mode = CameraMode.None;
-            illusionCamera = Camera.main.GetComponent<IllusionCamera>();
-
-            var controls = GameObject.FindObjectOfType<H_EditsUIControl>();
-            if (controls)
-            {
-                BuildGUI(controls);
-            }
-
-          
-            yield return null;
-            if (m_scene)
-            {
-                // Look initialization
-                try
-                {
-                    var female = m_scene.Members.First(h => h.sex == Human.SEX.FEMALE);
-                    oldHeadLook.IsChecked = true;
-                    oldHeadLook.Target = (Transform)_eyeLookTargetInfo.GetValue(female.neckLook);
-                    oldHeadLook.Type = female.neckLook.CalcType;
-
-                    oldHeadLook.IsChecked = true;
-                    oldHeadLook.Target = (Transform)_eyeLookTargetInfo.GetValue(female.eyeLook);
-                    oldHeadLook.Type = female.eyeLook.CalcType;
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                }
-
-                try
-                {
-                    var target = new GameObject().AddComponent<EyeTarget>();
-                    target.rootNode = GameObject.Find("cf_J_Eye_ty").transform;
-
-                    m_eyeTarget = target.transform;
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    m_eyeTarget = Camera.main.transform;
-                }
-            }
-           
-
-        }
 
 
         private void BuildGUI(H_EditsUIControl controls)
@@ -518,5 +461,74 @@ namespace CameraModifications
 
         }
 
+
+       
+
+        public void OnLevelWasInitialized(int level)
+        {
+
+            if (m_scene)
+            {
+                // Look initialization
+                try
+                {
+                    var female = Humans.First(h => h.sex == Human.SEX.FEMALE);
+                    oldHeadLook.IsChecked = true;
+                    oldHeadLook.Target = (Transform)_eyeLookTargetInfo.GetValue(female.neckLook);
+                    oldHeadLook.Type = female.neckLook.CalcType;
+
+                    oldHeadLook.IsChecked = true;
+                    oldHeadLook.Target = (Transform)_eyeLookTargetInfo.GetValue(female.eyeLook);
+                    oldHeadLook.Type = female.eyeLook.CalcType;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+
+                try
+                {
+                    var target = new GameObject().AddComponent<EyeTarget>();
+                    target.rootNode = GameObject.Find("cf_J_Eye_ty").transform;
+
+                    m_eyeTarget = target.transform;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    m_eyeTarget = Camera.main.transform;
+                }
+            }
+        }
+
+        public void OnLateUpdate()
+        {
+
+        }
+
+        public void OnApplicationQuit()
+        {
+        }
+
+        public void OnLevelWasLoaded(int level)
+        {
+            m_scene = GameObject.FindObjectOfType<H_Scene>();
+
+            LookType = LookAtRotator.TYPE.NO;
+            HeadLookType = LookAtRotator.TYPE.NO;
+            m_mode = CameraMode.None;
+            illusionCamera = Camera.main.GetComponent<IllusionCamera>();
+
+            var controls = GameObject.FindObjectOfType<H_EditsUIControl>();
+            if (controls)
+            {
+                BuildGUI(controls);
+            }
+        }
+
+
+        public void OnFixedUpdate()
+        {
+        }
     }
 }
