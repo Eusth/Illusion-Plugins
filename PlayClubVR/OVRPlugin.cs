@@ -61,8 +61,20 @@ namespace PlayClubVR
             if (enabled)
             {
                 var mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
+                int uiMask = LayerMask.GetMask("UI");
+                var subCams = Camera.allCameras.Where(
+                    cam => (cam.cullingMask & uiMask) == 0 
+                        && !cam.name.Contains("Anchor") 
+                        && !cam.name.Contains("Oculus")
+                        && cam.clearFlags != CameraClearFlags.Color).ToArray();
+                //var cullingMask = Camera.allCameras.Where(cam => (cam.cullingMask & uiMask) == 0).Aggregate(0, (a, b) => a | b.cullingMask);
+                //Console.WriteLine("Found {0} cameras which gives {1}", Camera.allCameras.Length, cullingMask);
 
-                ovrCamera.Mimic(Camera.main);
+                foreach (var subCam in subCams)
+                {
+                    Console.WriteLine("{0}: {1}", subCam.name, subCam.depth);
+                }
+                ovrCamera.Mimic(Camera.main, subCams);
             }
         }
 

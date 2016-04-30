@@ -32,12 +32,15 @@
     </NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'PCDeploy|AnyCPU'">
-    <OutputPath>D:\Novels\illusion\PlayClub\Plugins\</OutputPath>
+    <OutputPath>D:\Visual Novels\Binaries\ILLUSION\PlayClub\Plugins\</OutputPath>
     <NoWarn>
     </NoWarn>
     <DefineConstants>UNITY_4_5</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>..\Lib\Assembly-CSharp-firstpass.dll</HintPath>
+    </Reference>
     <Reference Include="Assembly-CSharp-PlayClub">
       <HintPath>..\Lib\Assembly-CSharp-PlayClub.dll</HintPath>
     </Reference>
@@ -55,6 +58,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ComponentExtensions.cs" />
     <Compile Include="CursorBlocker.cs" />
     <Compile Include="GameObjectExt.cs" />
     <Compile Include="GuardedBehaviour.cs" />

@@ -91,7 +91,7 @@ namespace PlayClubVR
             GameObject.DontDestroyOnLoad(guiCamera);
 
             guiCamera.cullingMask = LayerMask.GetMask("UI");
-            guiCamera.depth = 1;
+            guiCamera.depth = 1000;
             guiCamera.nearClipPlane = 99f;
             guiCamera.farClipPlane = 10000;
             guiCamera.targetTexture = texture;

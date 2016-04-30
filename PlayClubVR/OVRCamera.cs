@@ -195,6 +195,7 @@ namespace PlayClubVR
         }
 
 
+
         private void SetHead(Transform head, bool visible)
         {
             var invisibleHead = head.GetComponent<InvisibleHead>() ?? head.gameObject.AddComponent<InvisibleHead>();
@@ -245,8 +246,9 @@ namespace PlayClubVR
             
         }
 
-        public void Mimic(Camera cam)
+        public void Mimic(Camera cam, Camera[] subCameras = null)
         {
+            Console.WriteLine("MIMIC: {0}", cam);
             scene = GameObject.FindObjectOfType<Scene>();
             if (cam == null)
             {
@@ -267,6 +269,8 @@ namespace PlayClubVR
             }
             else
             {
+                var effects = cam.GetComponents<MonoBehaviour>().Where(fx => !(fx is IllusionCamera || fx is CameraRenderImageToTex));
+
                 // Copy camera values
                 ApplyToCameras(ovrCamera =>
                 {
@@ -275,6 +279,16 @@ namespace PlayClubVR
                     ovrCamera.cullingMask = cam.camera.cullingMask & ~LayerMask.GetMask("UI");
                     ovrCamera.clearFlags = CameraClearFlags.Color;
                     ovrCamera.backgroundColor = cam.backgroundColor;
+                    ovrCamera.depth = cam.depth;
+
+                    foreach (var oldEffect in ovrCamera.GetComponents<MonoBehaviour>())
+                        GameObject.DestroyImmediate(oldEffect);
+                    foreach (var newEffect in effects)
+                        ovrCamera.gameObject.AddComponent(newEffect);
+
+                    //Console.WriteLine("Found effects in {0}: {1} ({2})", cam.name,  string.Join(", ", effects.Select(e => e.GetType().Name).ToArray()), effects.Length);
+                    //Console.WriteLine("My effects: " + string.Join(", ", ovrCamera.GetComponents<MonoBehaviour>().Select(e => e.GetType().Name).ToArray()));
+
                     //Console.WriteLine(ovrCamera.clearFlags);
                     //var skybox = cam.GetComponent<Skybox>();
                     //if (skybox != null)
@@ -295,6 +309,12 @@ namespace PlayClubVR
                 Base = follow;
             }
 
+            if (subCameras != null)
+            {
+                foreach (var subCam in subCameras)
+                    CreateSubCamera(subCam);
+            }
+
             illusionCamera = GameObject.FindObjectOfType<IllusionCamera>();
 
             transform.localPosition = Vector3.zero;
@@ -302,6 +322,34 @@ namespace PlayClubVR
 
             SetRotationLock(lockRotation);
         }
+
+        private GameObject CreateSubCamera(Camera master)
+        {
+            var obj = new GameObject();
+            obj.AddComponent<OVRCameraRig>();
+
+            var centerEye = obj.GetComponentsInChildren<Transform>().First(c => c.name == "CenterEyeAnchor").gameObject;
+            var leftEye = obj.GetComponentsInChildren<Camera>().First(c => c.name == "LeftEyeAnchor").gameObject;
+            var rightEye = obj.GetComponentsInChildren<Camera>().First(c => c.name == "RightEyeAnchor").gameObject;
+
+            obj.transform.SetParent(master.transform, false);
+
+
+            foreach(var ovrCamera in new Camera[] {leftEye.camera, rightEye.camera}) {
+                ovrCamera.nearClipPlane = master.nearClipPlane;
+                ovrCamera.farClipPlane = master.farClipPlane;
+                ovrCamera.cullingMask = master.cullingMask;
+                ovrCamera.clearFlags = master.clearFlags;
+                ovrCamera.depth = master.depth;
+                ovrCamera.backgroundColor = master.backgroundColor;
+            }
+
+            master.cullingMask = 0;
+            //master.enabled = false;
+
+            return obj;
+        }
+
 
         public void ApplyToCameras(CameraOperation operation)
         {
