@@ -167,7 +167,22 @@ namespace QuietLauncher
                     if (targetType == null) Fail("Couldn't find entry class. Aborting.");
 
                     var awakeMethod = targetType.Methods.FirstOrDefault(m => m.Name == "Awake");
-                    if (awakeMethod == null) Fail("Couldn't find awake method. Aborting.");
+                    if (awakeMethod == null && targetType.BaseType.FullName == "UnityEngine.MonoBehaviour")
+                    {
+                        MethodAttributes attributes =
+                            MethodAttributes.FamANDAssem |
+                            MethodAttributes.Family |
+                            MethodAttributes.Virtual |
+                            MethodAttributes.HideBySig |
+                            MethodAttributes.VtableLayoutMask;
+                        awakeMethod = new MethodDefinition("Awake", attributes, module.Import(typeof(void)));
+                        awakeMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+                        targetType.Methods.Add(awakeMethod);
+                    }
+                    else
+                    {
+                        Fail("Couldn't find awake method. Aborting.");
+                    }
 
                     var injector = ModuleDefinition.ReadModule(injectorPath);
                     var methodReference = module.Import(injector.GetType("IllusionInjector.Injector").Methods.First(m => m.Name == "Inject"));
@@ -277,7 +292,9 @@ namespace QuietLauncher
         private static bool IsVirtualized(ModuleDefinition module)
         {
             var targetType = module.GetType("StudioMain") ?? module.GetType("BaseScene") ?? module.GetType("Scene");
-            return targetType.Methods.First(m => m.Name == "Awake").IsVirtual;
+            //return targetType.Methods.First(m => m.Name == "Awake").IsVirtual;
+            MethodDefinition method = targetType.Methods.FirstOrDefault(m => m.Name == "Awake");
+            return method == null ? true : method.IsVirtual;
         }
 
         private static void Fail(string reason) {
