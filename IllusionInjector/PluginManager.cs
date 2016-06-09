@@ -1,43 +1,65 @@
 ﻿using IllusionPlugin;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace IllusionInjector
 {
     static class PluginManager
     {
+        private static List<IPlugin> _Plugins = null;
 
-        public static IEnumerable<IPlugin> LoadPlugins()
+        /// <summary>
+        /// Gets the list of loaded plugins and loads them if necessary.
+        /// </summary>
+        public static IEnumerable<IPlugin> Plugins
+        {
+            get
+            {
+                if(_Plugins == null)
+                {
+                    LoadPlugins();
+                }
+                return _Plugins;
+            }
+        }
+
+
+        private static void LoadPlugins()
         {
             string pluginDirectory = Path.Combine(Environment.CurrentDirectory, "Plugins");
-            string exeName = (System.Diagnostics.Process.GetCurrentProcess().ProcessName);
-            
-            if (!Directory.Exists(pluginDirectory)) return new IPlugin[0];
+
+            // Process.GetCurrentProcess().MainModule crashes the game and Assembly.GetEntryAssembly() is NULL,
+            // so we need to resort to P/Invoke
+            string exeName = Path.GetFileNameWithoutExtension(AppInfo.StartupPath); 
+
+            _Plugins = new List<IPlugin>();
+
+            if (!Directory.Exists(pluginDirectory)) return;
             
             String[] files = Directory.GetFiles(pluginDirectory, "*.dll");
-            List<IPlugin> plugins = new List<IPlugin>();
             foreach (var s in files)
             {
-                plugins.AddRange(LoadPluginsFromFile(Path.Combine(pluginDirectory, s), exeName));
+                _Plugins.AddRange(LoadPluginsFromFile(Path.Combine(pluginDirectory, s), exeName));
             }
             
 
             // DEBUG
             Console.WriteLine("-----------------------------");
-            Console.WriteLine("Loading plugins from {0} and found {1}", pluginDirectory, plugins.Count);
+            Console.WriteLine("Loading plugins from {0} and found {1}", pluginDirectory, _Plugins.Count);
             Console.WriteLine("-----------------------------");
-            foreach (var plugin in plugins)
+            foreach (var plugin in _Plugins)
             {
 
                 Console.WriteLine(" {0}: {1}", plugin.Name, plugin.Version);
             }
             Console.WriteLine("-----------------------------");
-            // ---
-
-            return plugins;
+ 
         }
 
         private static IEnumerable<IPlugin> LoadPluginsFromFile(string file, string exeName)
@@ -49,7 +71,7 @@ namespace IllusionInjector
 
             try
             {
-                Assembly assembly = Assembly.LoadFile(file);
+                Assembly assembly = Assembly.LoadFrom(file);
 
                 foreach (Type t in assembly.GetTypes())
                 {
@@ -82,6 +104,22 @@ namespace IllusionInjector
             }
 
             return plugins;
+        }
+
+        public class AppInfo
+        {
+            [DllImport("kernel32.dll", CharSet = CharSet.Auto, ExactSpelling = false)]
+            private static extern int GetModuleFileName(HandleRef hModule, StringBuilder buffer, int length);
+            private static HandleRef NullHandleRef = new HandleRef(null, IntPtr.Zero);
+            public static string StartupPath
+            {
+                get
+                {
+                    StringBuilder stringBuilder = new StringBuilder(260);
+                    GetModuleFileName(NullHandleRef, stringBuilder, stringBuilder.Capacity);
+                    return Path.GetDirectoryName(stringBuilder.ToString());
+                }
+            }
         }
 
     }

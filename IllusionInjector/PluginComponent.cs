@@ -19,7 +19,7 @@ namespace IllusionInjector
                 Windows.GuiConsole.CreateConsole();
             }
 
-            plugins = new CompositePlugin(PluginManager.LoadPlugins());
+            plugins = new CompositePlugin(PluginManager.Plugins);
             plugins.OnApplicationStart();
         }
 
