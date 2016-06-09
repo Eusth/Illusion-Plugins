@@ -38,6 +38,11 @@ namespace IllusionInjector
             plugins.OnUpdate();
         }
 
+        void LateUpdate()
+        {
+            plugins.OnLateUpdate();
+        }
+
         void FixedUpdate()
         {
             plugins.OnFixedUpdate();
@@ -52,11 +57,6 @@ namespace IllusionInjector
         {
             plugins.OnLevelWasLoaded(level);
             freshlyLoaded = true;
-        }
-
-        void OnLateUpdate()
-        {
-            plugins.OnLateUpdate();
         }
 
     }
