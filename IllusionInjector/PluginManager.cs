@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -87,10 +88,9 @@ namespace IllusionInjector
                             {
                                 filter = ((IEnhancedPlugin)pluginInstance).Filter;
                             }
-
-                            if(filter == null || new List<string>(filter).Contains(exeName))
+                            
+                            if(filter == null || Enumerable.Contains(filter, exeName, StringComparer.OrdinalIgnoreCase))
                                 plugins.Add(pluginInstance);
-                            //return;
                         }
                         catch (Exception)
                         {
