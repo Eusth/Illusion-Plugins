@@ -37,8 +37,8 @@ namespace IllusionInjector
 
             // Process.GetCurrentProcess().MainModule crashes the game and Assembly.GetEntryAssembly() is NULL,
             // so we need to resort to P/Invoke
-            string exeName = Path.GetFileNameWithoutExtension(AppInfo.StartupPath); 
-
+            string exeName = Path.GetFileNameWithoutExtension(AppInfo.StartupPath);
+            Console.WriteLine(exeName);
             _Plugins = new List<IPlugin>();
 
             if (!Directory.Exists(pluginDirectory)) return;
@@ -117,7 +117,7 @@ namespace IllusionInjector
                 {
                     StringBuilder stringBuilder = new StringBuilder(260);
                     GetModuleFileName(NullHandleRef, stringBuilder, stringBuilder.Capacity);
-                    return Path.GetDirectoryName(stringBuilder.ToString());
+                    return stringBuilder.ToString();
                 }
             }
         }
