@@ -167,21 +167,23 @@ namespace QuietLauncher
                     if (targetType == null) Fail("Couldn't find entry class. Aborting.");
 
                     var awakeMethod = targetType.Methods.FirstOrDefault(m => m.Name == "Awake");
-                    if (awakeMethod == null && targetType.BaseType.FullName == "UnityEngine.MonoBehaviour")
+                    if (awakeMethod == null)
                     {
-                        MethodAttributes attributes =
-                            MethodAttributes.FamANDAssem |
-                            MethodAttributes.Family |
-                            MethodAttributes.Virtual |
-                            MethodAttributes.HideBySig |
-                            MethodAttributes.VtableLayoutMask;
-                        awakeMethod = new MethodDefinition("Awake", attributes, module.Import(typeof(void)));
-                        awakeMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
-                        targetType.Methods.Add(awakeMethod);
-                    }
-                    else
-                    {
-                        Fail("Couldn't find awake method. Aborting.");
+                        if (targetType.BaseType.FullName == "UnityEngine.MonoBehaviour")
+                        {
+                            MethodAttributes attributes =
+                                MethodAttributes.FamANDAssem |
+                                MethodAttributes.Family |
+                                MethodAttributes.Virtual |
+                                MethodAttributes.HideBySig |
+                                MethodAttributes.VtableLayoutMask;
+                            awakeMethod = new MethodDefinition("Awake", attributes, module.Import(typeof(void)));
+                            awakeMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+                            targetType.Methods.Add(awakeMethod);
+                        } else
+                        {
+                            Fail("Couldn't find awake method. Aborting.");
+                        }
                     }
 
                     var injector = ModuleDefinition.ReadModule(injectorPath);
