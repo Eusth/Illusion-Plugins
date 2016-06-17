@@ -18,6 +18,8 @@ namespace QuietLauncher
             //"Awake",
             //"OnDestroy"
         };
+        private static string[] ENTRY_TYPES = { "StudioMain", "BaseScene", "Scene", "GameControl" };
+       
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
@@ -26,6 +28,7 @@ namespace QuietLauncher
         {
             try {
                 var execPath = Application.ExecutablePath;
+                //execPath = @"D:\Visual Novels\Binaries\ILLUSION\HoneySelectTrial\HoneySelectTrial_64_Patched.exe";
                 var fileName = Path.GetFileNameWithoutExtension(execPath);
                 if (fileName.IndexOf("VR") == -1 && fileName.IndexOf("_") == -1) return;
     
@@ -42,7 +45,7 @@ namespace QuietLauncher
                     var args = Environment.GetCommandLineArgs().ToList();
                     bool created = false;
     
-                    var dataFolder = Path.GetFileNameWithoutExtension(file.Name) + "_Data";
+                    var dataFolder = Path.Combine(file.DirectoryName, Path.GetFileNameWithoutExtension(file.Name) + "_Data");
                     var assemblyPath = Path.Combine(Path.Combine(dataFolder, "Managed"), "Assembly-CSharp.dll");
                     var directToRiftPath = baseName + "_DirectToRift.exe";
     
@@ -116,8 +119,7 @@ namespace QuietLauncher
 
         static void Patch(string file)
         {
-        //    args = new string[] { @"D:\Novels\illusion\HaremMate\HaremStudio_Data\Managed\Assembly-CSharp.dll" };
-          
+
             var input = new FileInfo(file);
             string backup = input.FullName + ".Original";
 
@@ -136,7 +138,7 @@ namespace QuietLauncher
             var directory = input.DirectoryName;
             var injectorPath = Path.Combine(directory, "IllusionInjector.dll");
 
-            if (!File.Exists(injectorPath)) Fail("You're missing IllusionInjector.dll. Please make sure to extract all files correctly.");
+            if (!File.Exists(injectorPath)) Fail("You're missing IllusionInjector.dll. ease make sure to extract all files correctly.");
 
             var resolver = new DefaultAssemblyResolver();
             resolver.AddSearchDirectory(directory);
@@ -161,8 +163,7 @@ namespace QuietLauncher
                     // First, let's add the reference
                     var nameReference = new AssemblyNameReference("IllusionInjector", new Version(1, 0, 0, 0));
                     module.AssemblyReferences.Add(nameReference);
-
-                    var targetType = module.GetType("StudioMain") ?? module.GetType("BaseScene") ?? module.GetType("Scene");
+                    var targetType = FindEntryType(module);
 
                     if (targetType == null) Fail("Couldn't find entry class. Aborting.");
 
@@ -293,7 +294,9 @@ namespace QuietLauncher
 
         private static bool IsVirtualized(ModuleDefinition module)
         {
-            var targetType = module.GetType("StudioMain") ?? module.GetType("BaseScene") ?? module.GetType("Scene");
+            var targetType = FindEntryType(module);
+            if (targetType == null) return false;
+
             //return targetType.Methods.First(m => m.Name == "Awake").IsVirtual;
             MethodDefinition method = targetType.Methods.FirstOrDefault(m => m.Name == "Awake");
             return method == null ? true : method.IsVirtual;
@@ -301,6 +304,16 @@ namespace QuietLauncher
 
         private static void Fail(string reason) {
             throw new Exception(reason);
+        }
+
+        private static TypeDefinition FindEntryType(ModuleDefinition module)
+        {
+            return module.GetTypes().FirstOrDefault(IsEntryType);
+        }
+
+        private static bool IsEntryType(TypeDefinition type)
+        {
+            return ENTRY_TYPES.Contains(type.Name);
         }
 
     }
