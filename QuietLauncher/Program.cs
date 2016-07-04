@@ -138,7 +138,7 @@ namespace QuietLauncher
             var directory = input.DirectoryName;
             var injectorPath = Path.Combine(directory, "IllusionInjector.dll");
 
-            if (!File.Exists(injectorPath)) Fail("You're missing IllusionInjector.dll. ease make sure to extract all files correctly.");
+            if (!File.Exists(injectorPath)) Fail("You're missing IllusionInjector.dll. Please make sure to extract all files correctly.");
 
             var resolver = new DefaultAssemblyResolver();
             resolver.AddSearchDirectory(directory);
