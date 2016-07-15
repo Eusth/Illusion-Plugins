@@ -87,6 +87,9 @@ namespace CameraModifications
         public Vector3 lockOffset = new Vector3(0, 0.1f, 0);
 
         private FieldInfo _eyeLookTargetInfo = typeof(LookAtRotator).GetField("target", BindingFlags.Instance | BindingFlags.NonPublic);
+        private FieldInfo _humanMouthState = typeof(Mouth).GetField("state", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private const int HUMAN_MOUTH_STATE_FERA = 1;
 
         Transform m_eyeTarget;
 
@@ -101,16 +104,16 @@ namespace CameraModifications
         private KeyStroke m_ToggleDynamicCameraKey = new KeyStroke(ModPrefs.GetString("Camera", "sToggleDynamicCameraKey", "Ctrl+Tab", true));
 
 
-        private LookAtRotator.TYPE LookType
+        public LookAtRotator.TYPE LookType
         {
             get { return (LookAtRotator.TYPE)currentType; }
-            set { currentType = (int)value; }
+            set { currentType = (int)value; oldEyeLook.IsChecked = false; }
         }
 
-        private LookAtRotator.TYPE HeadLookType
+        public LookAtRotator.TYPE HeadLookType
         {
             get { return (LookAtRotator.TYPE)currentHeadType; }
-            set { currentHeadType = (int)value; }
+            set { currentHeadType = (int)value; oldHeadLook.IsChecked = false; }
         }
 
         public void OnApplicationStart()
@@ -141,6 +144,7 @@ namespace CameraModifications
 
             _humanDirty = true;
         }
+
 
         private void HandleKeys()
         {
@@ -348,12 +352,17 @@ namespace CameraModifications
             }
         }
 
+        private bool IsBlowJobbing(Human human)
+        {
+            return HUMAN_MOUTH_STATE_FERA == (int)_humanMouthState.GetValue(human.mouth);
+        }
+
         private void UpdateLook()
         {
             
             foreach (var female in Humans.Where(m => m.sex == Human.SEX.FEMALE))
             {
-              
+                var headLookType = IsBlowJobbing(female) ? LookAtRotator.TYPE.NO : HeadLookType;
 
                 if (LookType != LookAtRotator.TYPE.NO)
                 {
@@ -372,9 +381,9 @@ namespace CameraModifications
                     }
                 }
 
-                if (HeadLookType != LookAtRotator.TYPE.NO)
+                if (headLookType != LookAtRotator.TYPE.NO)
                 {
-                    if (female.neckLook.CalcType != HeadLookType || (Transform)_eyeLookTargetInfo.GetValue(female.neckLook) != m_eyeTarget)
+                    if (female.neckLook.CalcType != headLookType || (Transform)_eyeLookTargetInfo.GetValue(female.neckLook) != m_eyeTarget)
                     {
                         // Keep track
                         if (oldHeadLook.IsChecked || currentHeadType == 1)
@@ -384,7 +393,7 @@ namespace CameraModifications
                             oldHeadLook.Type = female.neckLook.CalcType;
                         }
 
-                        female.ChangeNeckLook(HeadLookType, m_eyeTarget, true);
+                        female.ChangeNeckLook(headLookType, m_eyeTarget, true);
                     }
                 }
 
@@ -393,7 +402,7 @@ namespace CameraModifications
                     //Console.WriteLine("RESET LOOK {0} {1}", oldEyeLook.Target, oldEyeLook.Type);
                     female.eyeLook.Change(oldEyeLook.Type, oldEyeLook.Target, true);
                 }
-                if (HeadLookType == LookAtRotator.TYPE.NO && !oldHeadLook.IsChecked)
+                if (headLookType == LookAtRotator.TYPE.NO && !oldHeadLook.IsChecked)
                 {
                     //Console.WriteLine("RESET LOOK {0} {1}", oldEyeLook.Target, oldEyeLook.Type);
                     female.neckLook.Change(oldHeadLook.Type, oldHeadLook.Target, true);
@@ -514,8 +523,8 @@ namespace CameraModifications
         {
             m_scene = GameObject.FindObjectOfType<H_Scene>();
 
-            LookType = LookAtRotator.TYPE.NO;
-            HeadLookType = LookAtRotator.TYPE.NO;
+            currentType = (int)LookAtRotator.TYPE.NO;
+            currentHeadType = (int)LookAtRotator.TYPE.NO;
             m_mode = CameraMode.None;
             illusionCamera = Camera.main.GetComponent<IllusionCamera>();
 
