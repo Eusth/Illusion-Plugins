@@ -12,7 +12,7 @@ namespace MaestroMode
 
     public class MaestroPlugin : IPlugin
     {
-        enum MaestroMode
+        public enum MaestroMode
         {
             None,
             FBBIK,
@@ -24,6 +24,39 @@ namespace MaestroMode
         private List<IKHandle> _handles = new List<IKHandle>();
         private bool _visible = false;
         private MaestroMode _mode = MaestroMode.None;
+
+        public MaestroMode Mode {
+            get
+            {
+                return _mode;
+            }
+        set
+            {
+                if (_mode == value) return;
+
+                MaestroMode prev = _mode;
+                _mode = value;
+
+                if(prev != MaestroMode.None)
+                {
+                    CleanScene();
+                }
+                MakeBipeds();
+            }
+        }
+
+        public bool Visible
+        {
+            get
+            {
+                return _visible;
+            }
+            set
+            {
+                _visible = value;
+                UpdateHandleVisibility();
+            }
+        }
 
         private H_Style _currentStyle;
 
@@ -239,51 +272,14 @@ namespace MaestroMode
 
                 if (_toggleMaestroKey.Check())
                 {
-                    if (_mode == MaestroMode.FBBIK)
-                    {
-                        _visible = !_visible;
-                        UpdateHandleVisibility();
-                    }
-                    else if(_mode == MaestroMode.BIK)
-                    {
-                        CleanScene();
-
-                        _mode = MaestroMode.FBBIK;
-                        _visible = true;
-
-                        MakeBipeds();
-
-                    }
-                    else if (_mode == MaestroMode.None)
-                    {
-                        _visible = true;
-                        _mode = MaestroMode.FBBIK;
-                        MakeBipeds();
-                    }
+                    Mode = MaestroMode.FBBIK;
+                    Visible = true;
                 }
 
                 if (_toggleSimpleMaestroKey.Check())
                 {
-                    if (_mode == MaestroMode.BIK)
-                    {
-                        _visible = !_visible;
-                        UpdateHandleVisibility();
-                    }
-                    else if (_mode == MaestroMode.FBBIK)
-                    {
-                        CleanScene();
-
-                        _mode = MaestroMode.BIK;
-                        _visible = true;
-
-                        MakeBipeds();
-                    }
-                    else if (_mode == MaestroMode.None)
-                    {
-                        _visible = true;
-                        _mode = MaestroMode.BIK;
-                        MakeBipeds();
-                    }
+                    Mode = MaestroMode.BIK;
+                    Visible = true;
                 }
             }
         }

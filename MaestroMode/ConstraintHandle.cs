@@ -20,7 +20,7 @@ namespace MaestroMode
             transform.rotation = constraint.bone2.rotation;
         }
 
-        protected override void Activate(IKHandle.DragMode mode)
+        public override void Activate(IKHandle.DragMode mode)
         {
             constraint.bendGoal = transform;
             if (mode == DragMode.Move)

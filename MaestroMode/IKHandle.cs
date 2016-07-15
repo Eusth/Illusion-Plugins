@@ -54,7 +54,7 @@ namespace MaestroMode
 
         protected abstract void OnReset();
         protected abstract void CopyTransform();
-        protected abstract void Activate(DragMode mode);
+        public abstract void Activate(DragMode mode);
         protected abstract void ChangeWeight(DragMode mode, float amount);
 
         public abstract bool IsValid

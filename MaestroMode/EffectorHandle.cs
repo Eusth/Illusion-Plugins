@@ -21,7 +21,7 @@ namespace MaestroMode
             transform.rotation = effector.bone.rotation;
         }
 
-        protected override void Activate(IKHandle.DragMode mode)
+        public override void Activate(IKHandle.DragMode mode)
         {
             effector.target = transform;
             effector.positionWeight = 1;
