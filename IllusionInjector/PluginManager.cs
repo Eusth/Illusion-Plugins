@@ -11,7 +11,7 @@ using System.Text;
 
 namespace IllusionInjector
 {
-    static class PluginManager
+    public static class PluginManager
     {
         private static List<IPlugin> _Plugins = null;
 

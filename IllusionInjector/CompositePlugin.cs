@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace IllusionInjector
 {
-    class CompositePlugin : IPlugin
+    public class CompositePlugin : IPlugin
     {
         IEnumerable<IPlugin> plugins;
 

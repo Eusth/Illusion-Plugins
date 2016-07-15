@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace IllusionInjector
 {
-    class PluginComponent : MonoBehaviour
+    public class PluginComponent : MonoBehaviour
     {
         private CompositePlugin plugins;
         private bool freshlyLoaded = false;
