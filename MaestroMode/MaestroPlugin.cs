@@ -272,14 +272,16 @@ namespace MaestroMode
 
                 if (_toggleMaestroKey.Check())
                 {
+                    var prevMode = Mode;
                     Mode = MaestroMode.FBBIK;
-                    Visible = true;
+                    Visible = prevMode == Mode ? !Visible : true;
                 }
 
                 if (_toggleSimpleMaestroKey.Check())
                 {
+                    var prevMode = Mode;
                     Mode = MaestroMode.BIK;
-                    Visible = true;
+                    Visible = prevMode == Mode ? !Visible : true;
                 }
             }
         }
